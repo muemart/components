@@ -14,6 +14,11 @@
       "desc": "Probe ID of a RIPE Atlas probe"
     },
     {
+      "name": "ripeatlas.traceroute_id",
+      "prim": "natural",
+      "desc": "A unique identifier for a traceroute to match intermediate IPs to a traceroute"
+    },
+    {
       "name": "start",
       "prim": "time",
       "desc": "Start time of an event/flow that may have a non-zero duration"
