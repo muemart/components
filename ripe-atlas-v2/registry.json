@@ -4,6 +4,16 @@
   "registry-uri": "http://ict-mplane.eu/registry/core",
   "elements": [
     {
+      "name": "ripeatlas.msm_id",
+      "prim": "natural",
+      "desc": "Measurement ID of a RIPE Atlas measurement"
+    },
+    {
+      "name": "ripeatlas.probe_id",
+      "prim": "natural",
+      "desc": "Probe ID of a RIPE Atlas probe"
+    },
+    {
       "name": "start",
       "prim": "time",
       "desc": "Start time of an event/flow that may have a non-zero duration"
