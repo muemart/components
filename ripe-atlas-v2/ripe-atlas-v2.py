@@ -5,7 +5,10 @@ import ripe.atlas.sagan as sagan
 from datetime import datetime
 import pytz
 
-def services():
+_API_key = ""
+
+def services(API_key):
+    _API_key = API_key
     services = []
     services.append(AtlasResultService(result_common_cap(result_ping_cap())))
     services.append(AtlasResultService(result_common_cap(result_trace_cap())))
@@ -45,7 +48,8 @@ class AtlasResultService(mplane.scheduler.Service):
         kwargs = {
             "msm_id": spec.get_parameter_value("ripeatlas.msm_id"),
             "start": starttime,
-            "end": endtime
+            "end": endtime,
+            "key": _API_key
         }
         is_success, reqanswer = cousteau.AtlasResultsRequest(**kwargs).create();
         if not is_success:
