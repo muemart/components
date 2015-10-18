@@ -12,6 +12,7 @@ def services(API_key):
     services = []
     services.append(AtlasResultService(result_common_cap(result_ping_cap())))
     services.append(AtlasResultService(result_common_cap(result_trace_cap())))
+    services.append(AtlasCreateService(create_common_cap(create_ping_cap())))
     return services
 
 def result_ping_cap():
@@ -39,6 +40,16 @@ def result_common_cap(cap):
     cap.add_result_column("time")
     return cap
 
+def create_ping_cap():
+    cap = mplane.model.Capability(label = "ripeatlas-ping-create", when = "now ... future / 1s")
+    return cap
+
+def create_common_cap(cap):
+    cap.add_parameter("ripeatlas.probe_id", "[*]")
+    cap.add_parameter("destination.ip4")
+    cap.add_result_column("ripeatlas.msm_id")
+    return cap
+
 class AtlasResultService(mplane.scheduler.Service):
     def __init__(self, capability):
         return super().__init__(capability)
@@ -53,7 +64,7 @@ class AtlasResultService(mplane.scheduler.Service):
         }
         is_success, reqanswer = cousteau.AtlasResultsRequest(**kwargs).create();
         if not is_success:
-            raise RuntimeError("AtlasResultsRequest was not successful")
+            raise RuntimeError("AtlasResultsRequest was not successful: " + str(reqanswer))
         res = mplane.model.Result(specification=spec)
         measstart = datetime.now(tz=pytz.UTC)
         measend = datetime.fromtimestamp(0, pytz.UTC)
@@ -93,4 +104,29 @@ class AtlasResultService(mplane.scheduler.Service):
         else:
             raise ValueError("Unknown specification label: " + spec.get_label())
         res.set_when(mplane.model.When(a = measstart, b = measend))
+        return res
+
+class AtlasCreateService(mplane.scheduler.Service):
+    def __init__(self, capability):
+        return super().__init__(capability)
+    
+    def run(self, spec, check_interrupt):
+        probeids = spec.get_parameter_value("ripeatlas.probe_id")
+        if not isinstance(probeids, list):
+            probeids = [probeids]
+        source = cousteau.AtlasSource(type="probes", value=",".join([str(id) for id in probeids]), requested=len(probeids))
+        measurement = cousteau.measurement.AtlasMeasurement()
+        if  "ripeatlas-ping-create" in spec.get_label():
+            measurement = cousteau.Ping(af = 4, target = str(spec.get_parameter_value("destination.ip4")),
+                                        description = "test", interval = spec.when().period().seconds);
+
+        start, end = spec.when().datetimes()
+        request = cousteau.AtlasCreateRequest(key = _API_key, measurements = [measurement], sources = [source],
+                                              start_time = start, stop_time = end);
+        (is_success, response) = request.create()
+        if not is_success:
+            raise RuntimeError("AtlasCreateRequest was not successful: " + str(response))
+        
+        res = mplane.model.Result(specification=spec)
+        res.set_result_value("ripeatlas.msm_id", response["measurements"][0])
         return res
