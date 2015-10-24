@@ -56,8 +56,9 @@ class AtlasResultService(mplane.scheduler.Service):
 
     def run(self, spec, check_interrupt):
         starttime, endtime = spec.when().datetimes()
+        msm_id = spec.get_parameter_value("ripeatlas.msm_id")
         kwargs = {
-            "msm_id": spec.get_parameter_value("ripeatlas.msm_id"),
+            "msm_id": msm_id,
             "start": starttime,
             "end": endtime,
             "key": _API_key
@@ -69,6 +70,8 @@ class AtlasResultService(mplane.scheduler.Service):
         measstart = datetime.now(tz=pytz.UTC)
         measend = datetime.fromtimestamp(0, pytz.UTC)
         if  "ripeatlas-ping-result" in spec.get_label():
+            if not cousteau.Measurement(id=msm_id).type == "ping":
+                raise ValueError("Measurement " + str(msm_id) + " ist not of type ping")
             for i, proberes in enumerate(reqanswer):
                 result = sagan.PingResult(proberes)
                 res.set_result_value("delay.twoway.icmp.us.min", result.rtt_min * 1000, i)
@@ -83,6 +86,8 @@ class AtlasResultService(mplane.scheduler.Service):
                 measstart = result.created if result.created < measstart else measstart
                 measend = result.created if result.created > measend else measend
         elif "ripeatlas-trace-result" in spec.get_label():
+            if not cousteau.Measurement(id=msm_id).type == "traceroute":
+                raise ValueError("Measurement " + str(msm_id) + " ist not of type traceroute")
             i = 0
             for proberes in reqanswer:
                 result = sagan.TracerouteResult(proberes)
