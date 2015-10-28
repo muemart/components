@@ -117,8 +117,6 @@ class AtlasCreateService(mplane.scheduler.Service):
     
     def run(self, spec, check_interrupt):
         probeids = spec.get_parameter_value("ripeatlas.probe_id")
-        if not isinstance(probeids, list):
-            probeids = [probeids]
         source = cousteau.AtlasSource(type="probes", value=",".join([str(id) for id in probeids]), requested=len(probeids))
         measurement = cousteau.measurement.AtlasMeasurement()
         if  "ripeatlas-ping-create" in spec.get_label():
