@@ -16,7 +16,7 @@ def services(API_key):
     return services
 
 def result_ping_cap():
-    cap = mplane.model.Capability(verb = mplane.model.VERB_QUERY, label = "ripeatlas-ping-result", when = "past ... now")
+    cap = mplane.model.Capability(verb = mplane.model.VERB_MEASURE, label = "ripeatlas-ping-result", when = "past ... future")
     cap.add_result_column("delay.twoway.icmp.us.min")
     cap.add_result_column("delay.twoway.icmp.us.mean")
     cap.add_result_column("delay.twoway.icmp.us.50pct")
@@ -25,7 +25,7 @@ def result_ping_cap():
     return cap
 
 def result_trace_cap():
-    cap = mplane.model.Capability(verb = mplane.model.VERB_QUERY, label = "ripeatlas-trace-result", when = "past ... now")
+    cap = mplane.model.Capability(verb = mplane.model.VERB_MEASURE, label = "ripeatlas-trace-result", when = "past ... future")
     cap.add_result_column("intermediate.ip4")
     cap.add_result_column("ripeatlas.traceroute_id")
     cap.add_result_column("hops.ip")
@@ -41,7 +41,7 @@ def result_common_cap(cap):
     return cap
 
 def create_ping_cap():
-    cap = mplane.model.Capability(label = "ripeatlas-ping-create", when = "now ... future / 1s")
+    cap = mplane.model.Capability(verb = mplane.model.VERB_QUERY, label = "ripeatlas-ping-create", when = "now ... future / 1s")
     return cap
 
 def create_common_cap(cap):
@@ -70,7 +70,7 @@ class AtlasResultService(mplane.scheduler.Service):
         measstart = datetime.now(tz=pytz.UTC)
         measend = datetime.fromtimestamp(0, pytz.UTC)
         if  "ripeatlas-ping-result" in spec.get_label():
-            if not cousteau.Measurement(id=msm_id).type == "ping":
+            if not cousteau.Measurement(id=msm_id).type == "PING":
                 raise ValueError("Measurement " + str(msm_id) + " ist not of type ping")
             for i, proberes in enumerate(reqanswer):
                 result = sagan.PingResult(proberes)
@@ -86,7 +86,7 @@ class AtlasResultService(mplane.scheduler.Service):
                 measstart = result.created if result.created < measstart else measstart
                 measend = result.created if result.created > measend else measend
         elif "ripeatlas-trace-result" in spec.get_label():
-            if not cousteau.Measurement(id=msm_id).type == "traceroute":
+            if not cousteau.Measurement(id=msm_id).type == "TRACEROUTE":
                 raise ValueError("Measurement " + str(msm_id) + " ist not of type traceroute")
             i = 0
             for proberes in reqanswer:
@@ -126,10 +126,14 @@ class AtlasCreateService(mplane.scheduler.Service):
         start, end = spec.when().datetimes()
         request = cousteau.AtlasCreateRequest(key = _API_key, measurements = [measurement], sources = [source],
                                               start_time = start, stop_time = end);
-        (is_success, response) = request.create()
-        if not is_success:
-            raise RuntimeError("AtlasCreateRequest was not successful: " + str(response))
+        #(is_success, response) = request.create()
+        #if not is_success:
+        #    raise RuntimeError("AtlasCreateRequest was not successful: " + str(response))
         
-        res = mplane.model.Result(specification=spec)
-        res.set_result_value("ripeatlas.msm_id", response["measurements"][0])
+        #res = mplane.model.Result(specification=spec)
+        #res.set_result_value("ripeatlas.msm_id", response["measurements"][0])
+        res = mplane.model.Specification(capability = result_common_cap(result_ping_cap()))
+        res.set_parameter_value("ripeatlas.msm_id", 1)
+        res.set_when(spec.when())
+        res = mplane.model.Receipt(specification = res)
         return res
