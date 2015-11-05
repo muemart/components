@@ -19,6 +19,11 @@
       "desc": "A unique identifier for a traceroute to match intermediate IPs to a traceroute"
     },
     {
+      "name": "ripeatlas.hop_index",
+      "prim": "natural",
+      "desc": "Indicates the index of a hop in a traceroute"
+    },
+    {
       "name": "start",
       "prim": "time",
       "desc": "Start time of an event/flow that may have a non-zero duration"
