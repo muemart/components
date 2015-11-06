@@ -3,6 +3,7 @@ import mplane.scheduler
 import ripe.atlas.cousteau as cousteau
 import ripe.atlas.sagan as sagan
 from datetime import datetime
+from time import sleep
 import pytz
 
 _API_key = ""
@@ -29,6 +30,7 @@ def result_trace_cap():
     cap.add_result_column("intermediate.ip4")
     cap.add_result_column("ripeatlas.traceroute_id")
     cap.add_result_column("ripeatlas.hop_index")
+    cap.add_result_column("ripeatlas.protocol")
     cap.add_result_column("hops.ip")
     cap.add_result_column("rtt.ms")
     return cap
@@ -56,13 +58,22 @@ class AtlasResultService(mplane.scheduler.Service):
         return super().__init__(capability)
 
     def _notnone(self, value, default):
-        if value is not None:
+        if value is not None and value is not "":
             return value
         else:
             return default
 
     def run(self, spec, check_interrupt):
         starttime, endtime = spec.when().datetimes()
+        res = mplane.model.Result(specification=spec)
+
+        #wait until the measurement ended
+        while datetime.utcnow() < endtime:
+            if check_interrupt():
+                res.set_when(mplane.model.When(a = starttime, b = endtime))
+                return res
+            sleep(1)
+
         msm_id = spec.get_parameter_value("ripeatlas.msm_id")
         kwargs = {
             "msm_id": msm_id,
@@ -73,10 +84,9 @@ class AtlasResultService(mplane.scheduler.Service):
         is_success, reqanswer = cousteau.AtlasResultsRequest(**kwargs).create();
         if not is_success:
             raise RuntimeError("AtlasResultsRequest was not successful: " + str(reqanswer))
-        res = mplane.model.Result(specification=spec)
         measstart = datetime.now(tz=pytz.UTC)
         measend = datetime.fromtimestamp(0, pytz.UTC)
-
+        print("Got " + len(reqanswer) + " results. Processing...")
         #
         #       PING MEASUREMENT
         #
@@ -113,15 +123,15 @@ class AtlasResultService(mplane.scheduler.Service):
                 if result.is_malformed or result.is_error:
                     continue
                 for hopindex, hop in enumerate(result.hops):
-                    hopindex = 0
                     if hop.is_malformed or hop.is_error:
                         continue
                     for packet in hop.packets:
                         if packet.is_malformed or packet.is_error:
                            continue
-                        res.set_result_value("intermediate.ip4", self._notnone(packet.origin, "0.0.0.0"),i)
-                        res.set_result_value("ripeatlas.traceroute_id", hash(str(result.created) + result.origin),i)
-                        res.set_result_value("ripeatlas.hop_index", hopindex)
+                        res.set_result_value("intermediate.ip4", self._notnone(packet.origin, "0.0.0.0"), i)
+                        res.set_result_value("ripeatlas.traceroute_id", hash(str(result.created) + result.origin), i)
+                        res.set_result_value("ripeatlas.hop_index", hopindex, i)
+                        res.set_result_value("ripeatlas.protocol", self._notnone(result.protocol, ""), i)
                         res.set_result_value("hops.ip", self._notnone(result.total_hops, 0), i)
                         res.set_result_value("rtt.ms", self._notnone(packet.rtt, 0), i)
                         res.set_result_value("source.ip4", self._notnone(result.origin, "0.0.0.0"), i)
@@ -133,6 +143,10 @@ class AtlasResultService(mplane.scheduler.Service):
                 measend = result.created if result.created > measend else measend
         else:
             raise ValueError("Unknown specification label: " + spec.get_label())
+
+        #fix times if there are no results
+        if res.count_result_rows() is 0:
+            measstart, measend = spec.when().datetimes()
 
         res.set_when(mplane.model.When(a = measstart, b = measend))
         print("Sending " + str(res.count_result_rows()) + " result rows. This might take a while.")

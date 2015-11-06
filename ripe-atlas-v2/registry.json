@@ -24,6 +24,11 @@
       "desc": "Indicates the index of a hop in a traceroute"
     },
     {
+      "name": "ripeatlas.protocol",
+      "prim": "string",
+      "desc": "Specifies the protocol of a measurement. One of ICMP, TCP or UDP"
+    },
+    {
       "name": "start",
       "prim": "time",
       "desc": "Start time of an event/flow that may have a non-zero duration"
