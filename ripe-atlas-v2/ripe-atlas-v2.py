@@ -30,6 +30,7 @@ def result_trace_cap():
     cap.add_result_column("intermediate.ip4")
     cap.add_result_column("ripeatlas.traceroute_id")
     cap.add_result_column("ripeatlas.hop_index")
+    cap.add_result_column("ripeatlas.paris_id")
     cap.add_result_column("ripeatlas.protocol")
     cap.add_result_column("hops.ip")
     cap.add_result_column("rtt.ms")
@@ -67,8 +68,9 @@ class AtlasResultService(mplane.scheduler.Service):
         starttime, endtime = spec.when().datetimes()
         res = mplane.model.Result(specification=spec)
 
-        #wait until the measurement ended
-        while datetime.utcnow() < endtime:
+        #wait until the measurement ended or at least started
+        waittime = endtime if endtime is not None else starttime;
+        while datetime.utcnow() < waittime:
             if check_interrupt():
                 res.set_when(mplane.model.When(a = starttime, b = endtime))
                 return res
@@ -86,7 +88,7 @@ class AtlasResultService(mplane.scheduler.Service):
             raise RuntimeError("AtlasResultsRequest was not successful: " + str(reqanswer))
         measstart = datetime.now(tz=pytz.UTC)
         measend = datetime.fromtimestamp(0, pytz.UTC)
-        print("Got " + len(reqanswer) + " results. Processing...")
+        print("Got " + str(len(reqanswer)) + " results. Processing...")
         #
         #       PING MEASUREMENT
         #
@@ -131,6 +133,7 @@ class AtlasResultService(mplane.scheduler.Service):
                         res.set_result_value("intermediate.ip4", self._notnone(packet.origin, "0.0.0.0"), i)
                         res.set_result_value("ripeatlas.traceroute_id", hash(str(result.created) + result.origin), i)
                         res.set_result_value("ripeatlas.hop_index", hopindex, i)
+                        res.set_result_value("ripeatlas.paris_id", self._notnone(result.paris_id, -1), i)
                         res.set_result_value("ripeatlas.protocol", self._notnone(result.protocol, ""), i)
                         res.set_result_value("hops.ip", self._notnone(result.total_hops, 0), i)
                         res.set_result_value("rtt.ms", self._notnone(packet.rtt, 0), i)
