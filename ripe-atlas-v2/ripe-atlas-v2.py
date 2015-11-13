@@ -5,6 +5,7 @@ import ripe.atlas.sagan as sagan
 from datetime import datetime
 from time import sleep
 import pytz
+import re
 
 _API_key = ""
 
@@ -163,7 +164,7 @@ class AtlasCreateService(mplane.scheduler.Service):
 
     def _parse_source(self, spec):
         sources = []
-        tags = "{'include': ['system-ipv4-works']}"
+        tags = {"include": ["system-ipv4-works"]}
         areas = ["WW", "West", "North-Central", "South-Central", "North-East", "South-East"]
 
         probeids = spec.get_parameter_value("ripeatlas.probe_id")
@@ -181,8 +182,19 @@ class AtlasCreateService(mplane.scheduler.Service):
         if len(vals) % 2 is not 0:
             raise ValueError("Expected even amount of values in ripeatlas.probe_source (got " + str(len(vals)) + ")")
         #Iterate over every two strings
-        for stype, samount in zip(*[iter(vals)]*n):
-            pass
+        for stype, samount in zip(*[iter(vals)]*2):
+            if stype in areas: #e.g. "WW 2"
+                sources.append(cousteau.AtlasSource(type="area", value=stype, requested=int(samount), tags = tags))
+            elif stype[0:3] == "ASN": #e.g. "ASN3333 42"
+                sources.append(cousteau.AtlasSource(type="asn", value=stype[3:], requested=int(samount), tags = tags))
+            elif re.match(r"([0-9]{1,3}\.){3}[0-9]{1,3}/[0-9]{1,2}$", stype): #e.g. "193.3.6.0/8 4"
+                #Note: regex doesn't check bounds
+                sources.append(cousteau.AtlasSource(type="prefix", value=stype, requested=int(samount), tags = tags))
+            elif len(stype) is 2: #e.g. "CH 1337"
+                #TODO: should probably check if the country code is valid
+                sources.append(cousteau.AtlasSource(type="country", value=stype, requested=int(samount), tags = tags))
+            else:
+                print("Warning: Unknown type " + stype + " when parsing ripeatlas.probe_source")
 
         return sources
     
@@ -190,6 +202,8 @@ class AtlasCreateService(mplane.scheduler.Service):
         measurement = cousteau.measurement.AtlasMeasurement()
         res = mplane.model.Specification()
         sources = self._parse_source(spec)
+        if len(sources) is 0:
+            raise ValueError("No probes for this measurement have been defined")
         #
         #       PING MEASUREMENT
         #
