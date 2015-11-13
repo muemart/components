@@ -34,6 +34,11 @@
       "desc": "Specifies the protocol of a measurement. One of ICMP, TCP or UDP"
     },
     {
+      "name": "ripeatlas.probe_source",
+      "prim": "string",
+      "desc": "A string defining a set of probes to be used for a new RIPE Atlas measurement"
+    },
+    {
       "name": "start",
       "prim": "time",
       "desc": "Start time of an event/flow that may have a non-zero duration"
