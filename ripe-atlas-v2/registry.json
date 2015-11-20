@@ -9,6 +9,16 @@
       "desc": "Measurement ID of a RIPE Atlas measurement"
     },
     {
+      "name": "ripeatlas.paris",
+      "prim": "natural",
+      "desc": "Value to control paris traceroute. 0 means standard traceroute."
+    },
+    {
+      "name": "ripeatlas.description",
+      "prim": "string",
+      "desc": "The description of a measurement. Auto-generated if empty."
+    },
+    {
       "name": "ripeatlas.probe_id",
       "prim": "natural",
       "desc": "Probe ID of a RIPE Atlas probe"
