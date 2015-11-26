@@ -2,15 +2,19 @@ import mplane.model
 import mplane.scheduler
 import ripe.atlas.cousteau as cousteau
 import ripe.atlas.sagan as sagan
-from datetime import datetime
+from datetime import datetime, timedelta
 from time import sleep
 import pytz
 import re
 
-_API_key = ""
+_API_key_create = ""
+_API_key_result = ""
 
-def services(API_key):
-    _API_key = API_key
+def services(API_key_create, API_key_result):
+    global _API_key_create
+    global _API_key_result
+    _API_key_create = API_key_create
+    _API_key_result = API_key_result
     services = []
     services.append(AtlasResultService(result_common_cap(result_ping_cap())))
     services.append(AtlasResultService(result_common_cap(result_trace_cap())))
@@ -19,7 +23,7 @@ def services(API_key):
     return services
 
 def result_ping_cap():
-    cap = mplane.model.Capability(verb = mplane.model.VERB_MEASURE, label = "ripeatlas-ping-result", when = "past ... future")
+    cap = mplane.model.Capability(verb = mplane.model.VERB_QUERY, label = "ripeatlas-ping-result", when = "past ... future")
     cap.add_result_column("delay.twoway.icmp.us.min")
     cap.add_result_column("delay.twoway.icmp.us.mean")
     cap.add_result_column("delay.twoway.icmp.us.50pct")
@@ -28,7 +32,7 @@ def result_ping_cap():
     return cap
 
 def result_trace_cap():
-    cap = mplane.model.Capability(verb = mplane.model.VERB_MEASURE, label = "ripeatlas-trace-result", when = "past ... future")
+    cap = mplane.model.Capability(verb = mplane.model.VERB_QUERY, label = "ripeatlas-trace-result", when = "past ... future")
     cap.add_result_column("intermediate.ip4")
     cap.add_result_column("ripeatlas.traceroute_id")
     cap.add_result_column("ripeatlas.hop_index")
@@ -47,11 +51,11 @@ def result_common_cap(cap):
     return cap
 
 def create_ping_cap():
-    cap = mplane.model.Capability(verb = mplane.model.VERB_QUERY, label = "ripeatlas-ping-create", when = "now ... future / 1s")
+    cap = mplane.model.Capability(verb = mplane.model.VERB_QUERY, label = "ripeatlas-ping-create", when = "now ... future / 1m")
     return cap
 
 def create_trace_cap():
-    cap = mplane.model.Capability(verb = mplane.model.VERB_QUERY, label = "ripeatlas-trace-create", when = "now ... future / 1s")
+    cap = mplane.model.Capability(verb = mplane.model.VERB_QUERY, label = "ripeatlas-trace-create", when = "now ... future / 1m")
     cap.add_parameter("ripeatlas.protocol", "ICMP,TCP,UDP")
     cap.add_parameter("ripeatlas.paris", "0 ... 64")
     return cap
@@ -79,8 +83,9 @@ class AtlasResultService(mplane.scheduler.Service):
         starttime, endtime = spec.when().datetimes()
         res = mplane.model.Result(specification=spec)
 
-        #wait until the measurement ended or at least started
+        #wait until the measurement ended or at least started, plus one minute just to make sure
         waittime = endtime if endtime is not None else starttime;
+        waittime += timedelta(minutes = 1)
         while datetime.utcnow() < waittime:
             if check_interrupt():
                 res.set_when(mplane.model.When(a = starttime, b = endtime))
@@ -92,7 +97,7 @@ class AtlasResultService(mplane.scheduler.Service):
             "msm_id": msm_id,
             "start": starttime,
             "end": endtime,
-            "key": _API_key
+            "key": _API_key_result
         }
         is_success, reqanswer = cousteau.AtlasResultsRequest(**kwargs).create();
         if not is_success:
@@ -183,8 +188,8 @@ class AtlasCreateService(mplane.scheduler.Service):
         msmids = spec.get_parameter_value("ripeatlas.msm_id")
         if len(msmids) > 0:
             for msm in msmids:
-                #TODO: get amount of probes from measurement
-                sources.append(cousteau.AtlasSource(type="msm", value=str(msm), requested=1, tags = tags))
+                amount = cousteau.Measurement(id=msm).meta_data.get("probes_requested")
+                sources.append(cousteau.AtlasSource(type="msm", value=str(msm), requested=amount, tags = tags))
 
         vals = spec.get_parameter_value("ripeatlas.probe_source").split()
         if len(vals) % 2 is not 0:
@@ -234,16 +239,21 @@ class AtlasCreateService(mplane.scheduler.Service):
                 desc = spec.get_parameter_value("ripeatlas.protocol") + " traceroute to " + str(spec.get_parameter_value("destination.ip4"))
             res = mplane.model.Specification(capability = result_common_cap(result_trace_cap()))
             measurement = cousteau.Traceroute(af = 4, target = str(spec.get_parameter_value("destination.ip4")),
-                                        description = "test", interval = spec.when().period().seconds,
+                                        description = desc, interval = spec.when().period().seconds,
                                         paris = spec.get_parameter_value("ripeatlas.paris"),
                                         protocol = spec.get_parameter_value("ripeatlas.protocol"));
         else:
             raise ValueError("Unknown specification label: " + spec.get_label())
-
-
+        
         start, end = spec.when().datetimes()
-        request = cousteau.AtlasCreateRequest(key = _API_key, measurements = [measurement], sources = sources,
-                                              start_time = start, stop_time = end);
+        timedict = {"start_time": start}
+        if start == end:
+            timedict["is_oneoff"] = True
+        else:
+            timedict["stop_time"] = end
+
+        request = cousteau.AtlasCreateRequest(key = _API_key_create, measurements = [measurement], sources = sources,
+                                              **timedict);
         (is_success, response) = request.create()
         if not is_success:
             raise RuntimeError("AtlasCreateRequest was not successful: " + str(response["detail"]))
