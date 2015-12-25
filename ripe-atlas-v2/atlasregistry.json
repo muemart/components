@@ -1,0 +1,53 @@
+{
+  "registry-format": "mplane-0",
+  "registry-revision": 0,
+  "includes": ["http://ict-mplane.eu/registry/core"],
+  "registry-uri": "",
+  "elements": [
+    {
+      "name": "ripeatlas.msm_id",
+      "prim": "natural",
+      "desc": "Measurement ID of a RIPE Atlas measurement"
+    },
+    {
+      "name": "ripeatlas.paris",
+      "prim": "natural",
+      "desc": "Value to control paris traceroute. 0 means standard traceroute."
+    },
+    {
+      "name": "ripeatlas.description",
+      "prim": "string",
+      "desc": "The description of a measurement. Auto-generated if empty."
+    },
+    {
+      "name": "ripeatlas.probe_id",
+      "prim": "natural",
+      "desc": "Probe ID of a RIPE Atlas probe"
+    },
+    {
+      "name": "ripeatlas.traceroute_id",
+      "prim": "natural",
+      "desc": "A unique identifier for a traceroute to match intermediate IPs to a traceroute"
+    },
+    {
+      "name": "ripeatlas.hop_index",
+      "prim": "natural",
+      "desc": "Indicates the index of a hop in a traceroute"
+    },
+    {
+      "name": "ripeatlas.paris_id",
+      "prim": "natural",
+      "desc": "Identifies a flow in a paris traceroute measurement"
+    },
+    {
+      "name": "ripeatlas.protocol",
+      "prim": "string",
+      "desc": "Specifies the protocol of a measurement. One of ICMP, TCP or UDP"
+    },
+    {
+      "name": "ripeatlas.probe_source",
+      "prim": "string",
+      "desc": "A string defining a set of probes to be used for a new RIPE Atlas measurement"
+    }
+  ]
+}
