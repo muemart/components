@@ -29,3 +29,9 @@ Area | One of WW, West, North-Central, South-Central, North-East, South-East
 AS Number | ASN1234
 IP Prefix | 1.2.3.4/16
 Country | Any two-letter country code, like US or GB
+
+## Result Format
+### Ping
+The ping results are exactly as you'd expect. Evey result row is one result by one probe at one point in time.
+### Traceroute
+Traceroute results are more complicated. RIPE Atlas traceroute results are lists of traceroutes, which are lists of hops, which are lists of packets. In mPlane though, these lists get unrolled and every row is one packet. `ripeatlas.traceroute_id` says to which traceroute the packet belongs to, and `ripeatlas.hop_index` says to which hop inside said traceroute the packet belongs to.
