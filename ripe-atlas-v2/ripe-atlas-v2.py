@@ -109,7 +109,7 @@ class AtlasResultService(mplane.scheduler.Service):
         #       PING MEASUREMENT
         #
         if  "ripeatlas-ping-result" in spec.get_label():
-            if not cousteau.Measurement(id=msm_id).type == "PING":
+            if not cousteau.Measurement(id=msm_id, key=_API_key_result).type == "PING":
                 raise ValueError("Measurement " + str(msm_id) + " ist not of type ping")
             i = 0
             for proberes in reqanswer:
@@ -133,7 +133,7 @@ class AtlasResultService(mplane.scheduler.Service):
         #       TRACEROUTE MEASUREMENT
         #
         elif "ripeatlas-trace-result" in spec.get_label():
-            if not cousteau.Measurement(id=msm_id).type == "TRACEROUTE":
+            if not cousteau.Measurement(id=msm_id, key=_API_key_result).type == "TRACEROUTE":
                 raise ValueError("Measurement " + str(msm_id) + " ist not of type traceroute")
             i = 0
             for proberes in reqanswer:
@@ -188,7 +188,7 @@ class AtlasCreateService(mplane.scheduler.Service):
         msmids = spec.get_parameter_value("ripeatlas.msm_id")
         if len(msmids) > 0:
             for msm in msmids:
-                amount = cousteau.Measurement(id=msm).meta_data.get("probes_requested")
+                amount = cousteau.Measurement(id=msm, key=_API_key_result).meta_data.get("probes_requested")
                 sources.append(cousteau.AtlasSource(type="msm", value=str(msm), requested=amount, tags = tags))
 
         vals = spec.get_parameter_value("ripeatlas.probe_source").split()
