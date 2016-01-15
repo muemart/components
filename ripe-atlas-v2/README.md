@@ -7,8 +7,9 @@ This component provides access to RIPE Atlas through mPlane. It's possible to cr
 1. Obviously, you need the mPlane reference implementation (protocol-ri). The official repo is not supported yet.
 2. You'll need the **ripe.atlas.cousteau** and the **ripe.atlas.sagan** packages, available on pip.
 3. Copy the folder ripe-atlas-v2 (**not** only the contents) to [protocol-ri dir]/mplane/components.
-4. Start the client and the component with the configuration files in this folder. Make sure the working directory is the topmost directory of your protocol-ri copy (i.e. where setup.py is). No supervisor necessary.
-5. If you want to create measurements and get results from private measurements, you'll need to enter your key(s) in component.conf under the **module_ripe-atlas-v2** section.
+4. Add `127.0.0.1 Supervisor-1.SSB.mplane.org` and `127.0.0.1 Client-1.SSB.mplane.org` to your hosts file, or mess around with the certificates and configurations otherwise.
+5. Start the client and the component with the configuration files in this folder. Make sure the working directory is the topmost directory of your protocol-ri copy (i.e. where setup.py is). No supervisor necessary.
+6. If you want to create measurements and get results from private measurements, you'll need to enter your key(s) in component.conf under the **module_ripe-atlas-v2** section.
 
 ## Usage
 
